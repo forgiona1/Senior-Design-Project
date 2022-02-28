@@ -1,3 +1,5 @@
+// This is the INHERITED motor control code. Not currently being used; for reference only
+
 #include <SharpIR.h> // Library for the proximitydistance sensors 
 #define IR1 A0 // First proximity distance sensor 
 #define model1 1080 
