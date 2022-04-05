@@ -1,0 +1,251 @@
+#include <TinyGPSPlus.h>
+#include <SharpIR.h> 
+#include <Wire.h>
+#include <Adafruit_LIS3MDL.h>
+#include <Adafruit_Sensor.h>
+
+
+//GPS initilization ______________________________________________________________________
+// The TinyGPS++ object
+TinyGPSPlus gps;
+
+boolean checkLocation(double lat, double lng, double wayPoint_lat, double wayPoint_long);
+double getBearing(double lat,double lng,double wayPoint_lat,double wayPoint_long);
+
+double getLat();
+double latitude = 0;
+double getLong();
+double longitude = 0;
+static const uint32_t GPSBaud = 9600;
+
+
+//const double wayPoint_Lat[] = { 41.743118, 41.743003};
+
+//const double wayPoint_Long[] = {-74.082633, -74.081979};
+                               
+                             
+double current_Lat = 0;
+double current_Long = 0;
+int wayPointNumber = 0;
+//________________________________________________________________________________________
+
+
+//Sensor initilization & definitions______________________________________________________
+#define Sensor_Front A0 // First proximity distance sensor 
+//#define Sensor_Left  // find what pins for the side sensors,
+//#define Sensor_Right
+#define model1 1080 
+//#define model2 1080
+//#define model3 1080
+
+SharpIR mySensor_Front =  SharpIR(Sensor_Front, model1); // Initializingfor the first proximity distance sensor 
+//SharpIR mySensor_Left =  SharpIR(Sensor_Left, model2);
+//SharpIR mySensor_Right =  SharpIR(Sensor_Right, model3);
+int distance_Front = 0; 
+int distance_Left = 0;
+int distance_Right = 0;
+
+//_______________________________________________________________________________________
+
+//motor Controller initilization_________________________________________________________
+//fill this in with pins for rotary's and fill out functions
+
+
+
+void turnRight();
+void turnLeft();
+void foward();
+void reverse();
+void breaking();
+void stopping();
+
+
+
+
+//_______________________________________________________________________________________
+
+//Wifi controller setup if needed, idk what goes here. Random number generator and other setup stuff?
+
+
+//________________________________________________________________________________________________
+
+
+//compass initilization___________________________________________________________________________
+Adafruit_LIS3MDL lis3mdl;
+#define LIS3MDL_CLK 13
+#define LIS3MDL_MISO 12
+#define LIS3MDL_MOSI 11
+#define LIS3MDL_CS 10
+
+
+//________________________________________________________________________________________________
+
+
+void setup() {
+  Serial.begin(115200);
+  Serial1.begin(GPSBaud);
+  
+  // compass setup
+  if (! lis3mdl.begin_SPI(LIS3MDL_CS)) {  // hardware SPI mode
+  Serial.println("Failed to find LIS3MDL chip");
+    while (1) { delay(10); }
+  }
+  Serial.println("LIS3MDL Found!");
+  lis3mdl.setPerformanceMode(LIS3MDL_MEDIUMMODE);
+  lis3mdl.setOperationMode(LIS3MDL_CONTINUOUSMODE);
+  lis3mdl.setDataRate(LIS3MDL_DATARATE_155_HZ);
+  lis3mdl.setRange(LIS3MDL_RANGE_4_GAUSS);
+  lis3mdl.setIntThreshold(500);
+  lis3mdl.configInterrupt(false, false, true, // enable z axis
+                          true, // polarity
+                          false, // don't latch
+                          true); // enabled!
+
+    
+  }
+  // include setups for rotary's and other stuff
+}
+
+void loop() {
+  while(Serial1.available() > 0){
+    if(gps.encode(Serial1.read())){
+    current_Lat = getLat();
+    current_Long = getLong();
+    //getHeading()
+    //getBearing()
+    // compare the two and determine what direction robot needs to turn if any
+    /* if(bearing != heading{
+        figure out waht direction needs to turn by finding the difference between them
+        turn in dirrection using the angle difference
+        maybe we should create functions that turn specific angles from an input value found above
+      }
+    */
+
+      while(true){
+      current_Lat = getLat();
+      current_Long = getLong();
+      forward();
+      delay(1000);
+      if(distance_Left <= 45){
+        //turn right -> forward burst -> stop briefly -> re-ajust left
+        //turnRight();
+        //forward();
+        //breaking();
+        //turnLeft();
+      }
+      else if(distance_Right <=45){
+        // turn left -> forward burst -> stop briefly -> re-adjust right
+        //turnLeft()
+        //forward()
+        //breaking()
+        //turnRight();
+      }
+      else if(distance_Front <=45){
+      reverse();
+      breaking();
+      // maybe we should have something that if this repeats multiple times look for an exit left or right?
+      }
+      else{
+         //get distance to waypoint using current lat & long
+      double distanceToWaypoint = getDistanceToWaypoint(current_lat,current_Long,wayPoint_Lat[wayPointNumber],wayPoint_Long[wayPointNumber];
+      if(distanceToWayPoint <= 10){
+        wayPointNumber++;
+        break;
+      }
+     
+      }
+      
+    }
+  }
+
+}
+// we also will need to check if we are at the last waypoint, if not there will be a out of bounds error thrown because waypointnumber > arraylength. 
+// if(waypointnumber == wayPoint_lat.length() -> no longer incriment i;
+// then fully stop, and start the routine for package, password stuff, lcd, unlocking.
+
+
+
+
+// functions____________________________________________________________________________________________
+void foward(){
+// moves robot forward with no delay
+}
+
+void turnRight(){
+// robot needs to turn right then adjust itself back to facing forward
+// this could be done in the function by calling other functions or we could just keep it in the main code
+
+// something like: Robot slightly adjusts right -> quick burst forward -> turn left the same amount and continue
+}
+
+void turnLeft(){
+// needs to do the exact same thing as turnright()
+//move left slightly -> burst forward -> turnRight same amount -> continue
+}
+
+void reverse(){
+  //obviously reverse for a second and then stop completely
+}
+void breaking(){
+//completely stops robot, can be used for emergency situations & other functions
+}
+
+
+double getLat(){
+  //gets longitude using gps
+  if(gps.location.isValid(){
+    return gps.location.lat()
+  }
+  else{
+    Serial.println("Latitude not available");
+  }
+}
+
+double getLong(){
+  //gets longitude using gps
+  if(gps.location.isValid(){
+    return gps.location.lng();
+  }
+  else{
+    Serial.println("Longitude not available");
+  }
+}
+
+
+// this might not even be used, idk yet
+boolean checkLocation(double lat, double lng, double wayPoint_lat , double wayPoint_long) {
+  // check the current loctation and the waypoint location
+  if (lat == wayPoint_lat && lng == wayPoint_long ) {
+    return true;
+  }
+  else {
+    return false;
+  }
+}
+
+double getDistanceToWaypoint(double lat, double lng, double wayPoint_Lat, double wayPoint_long){
+   // gets distance between the waypoint and current lat, is used to find when we can incriment the waypoint number
+    return TinyGPSPlus::distanceBetween(current_Lat,current_Long, wayPoint_Lat[i],wayPoint_Long[i]) *3.28084;  
+}
+
+//this also might not be right so i gotta figure that out but itll get the angle to the waypoint if correct
+double getBearing(double lat,double lng,double wayPoint_lat,double wayPoint_long){
+double x = cos(lat) * sin(lng - wayPoint_long);
+double y = cos(lat) * sin(wayPoint_lat)  - sin(lat) * cos(lng) * cos(lng-wayPoint_long);
+
+double x_rad = x * (M_PI/180);
+double y_rad = y * (M_PI/180);
+double Beta = (atan2(x_rad,y_rad)* 180/M_PI);
+
+return Beta;
+}
+
+
+double getHeading(){
+  // figure out how to get accurate readings for the compass to pass into other functions
+  }
+
+
+
+
+
